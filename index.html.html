@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operation: CORE — ปฏิบัติการเจาะแก่นสาร</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&family=Sarabun:wght@300;400;600&display=swap');
+
+:root {
+  --bg: #050d12;
+  --surface: #0a1820;
+  --surface2: #0f2030;
+  --border: #1a3a50;
+  --accent: #00e5ff;
+  --accent2: #ff6b35;
+  --warn: #ffcc00;
+  --success: #00ff88;
+  --danger: #ff3366;
+  --text: #c8e8f0;
+  --text-dim: #5a8a9f;
+  --easy: #00ff88;
+  --medium: #ffcc00;
+  --hard: #ff3366;
+  --scan-line: rgba(0,229,255,0.03);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Sarabun', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, var(--scan-line) 2px, var(--scan-line) 4px);
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* NOISE OVERLAY */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 999;
+  opacity: 0.5;
+}
+
+/* TITLE SCREEN */
+#title-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+  text-align: center;
+  position: relative;
+}
+
+.grid-bg {
+  position: fixed;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+.corner-decor {
+  position: fixed;
+  width: 80px;
+  height: 80px;
+  border-color: var(--accent);
+  border-style: solid;
+  opacity: 0.4;
+}
+.corner-decor.tl { top: 20px; left: 20px; border-width: 2px 0 0 2px; }
+.corner-decor.tr { top: 20px; right: 20px; border-width: 2px 2px 0 0; }
+.corner-decor.bl { bottom: 20px; left: 20px; border-width: 0 0 2px 2px; }
+.corner-decor.br { bottom: 20px; right: 20px; border-width: 0 2px 2px 0; }
+
+.classified-stamp {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.3em;
+  color: var(--accent2);
+  border: 1px solid var(--accent2);
+  padding: 0.2rem 0.8rem;
+  margin-bottom: 2rem;
+  animation: blink 2s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.title-badge {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  letter-spacing: 0.15em;
+  margin-bottom: 1rem;
+}
+
+h1 {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: clamp(2.5rem, 8vw, 5rem);
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-shadow: 0 0 30px rgba(0,229,255,0.5), 0 0 60px rgba(0,229,255,0.2);
+  line-height: 1;
+  margin-bottom: 0.3rem;
+}
+
+h1 span {
+  color: var(--accent2);
+  text-shadow: 0 0 30px rgba(255,107,53,0.5);
+}
+
+.subtitle {
+  font-size: 1rem;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  margin-bottom: 3rem;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.story-box {
+  max-width: 600px;
+  background: rgba(0,229,255,0.03);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  padding: 1.5rem;
+  text-align: left;
+  margin-bottom: 2.5rem;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--text-dim);
+}
+
+.story-box .label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--accent);
+  letter-spacing: 0.2em;
+  margin-bottom: 0.8rem;
+}
+
+.level-select {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.level-btn {
+  background: transparent;
+  border: 1px solid;
+  padding: 0.8rem 2rem;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.level-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.level-btn:hover::before { opacity: 0.1; }
+
+.level-btn.easy { color: var(--easy); border-color: var(--easy); }
+.level-btn.medium { color: var(--medium); border-color: var(--medium); }
+.level-btn.hard { color: var(--hard); border-color: var(--hard); }
+.level-btn.audio { color: var(--accent); border-color: var(--accent); }
+
+.level-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+
+/* GAME SCREEN */
+#game-screen {
+  display: none;
+  min-height: 100vh;
+  padding: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1.2rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  margin-bottom: 1.5rem;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.8rem;
+}
+
+.hud-left { display: flex; flex-direction: column; gap: 0.2rem; }
+.hud-label { color: var(--text-dim); font-size: 0.65rem; letter-spacing: 0.15em; }
+.hud-value { color: var(--accent); font-size: 1rem; }
+
+.hud-center { text-align: center; }
+.mission-code { color: var(--accent2); letter-spacing: 0.1em; font-size: 0.75rem; }
+
+.energy-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
+}
+
+.energy-track {
+  width: 120px;
+  height: 8px;
+  background: var(--border);
+  position: relative;
+}
+
+.energy-fill {
+  height: 100%;
+  background: var(--success);
+  transition: width 0.3s, background 0.3s;
+}
+
+.case-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.case-number {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  letter-spacing: 0.15em;
+  white-space: nowrap;
+  padding-top: 0.2rem;
+}
+
+.case-title {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.05em;
+}
+
+.difficulty-badge {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.6rem;
+  padding: 0.15rem 0.6rem;
+  border: 1px solid;
+  letter-spacing: 0.1em;
+  margin-top: 0.3rem;
+  display: inline-block;
+}
+
+.difficulty-badge.easy { color: var(--easy); border-color: var(--easy); }
+.difficulty-badge.medium { color: var(--medium); border-color: var(--medium); }
+.difficulty-badge.hard { color: var(--hard); border-color: var(--hard); }
+
+.briefing-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--accent2);
+  padding: 1rem 1.2rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.briefing-box .label {
+  color: var(--accent2);
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  margin-bottom: 0.5rem;
+}
+
+/* ARTICLE BOX */
+.article-section {
+  margin-bottom: 1.5rem;
+}
+
+.section-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  letter-spacing: 0.2em;
+  margin-bottom: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.article-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+  font-size: 1rem;
+  line-height: 1.9;
+  color: var(--text);
+  position: relative;
+}
+
+/* AUDIO MODE */
+.audio-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.audio-speaker {
+  display: flex;
+  gap: 0.8rem;
+  margin-bottom: 1.2rem;
+  align-items: flex-start;
+}
+
+.speaker-tag {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.2rem 0.6rem;
+  background: var(--border);
+  white-space: nowrap;
+  margin-top: 0.1rem;
+}
+
+.speaker-tag.A { background: rgba(0,229,255,0.15); color: var(--accent); border-left: 2px solid var(--accent); }
+.speaker-tag.B { background: rgba(255,107,53,0.15); color: var(--accent2); border-left: 2px solid var(--accent2); }
+
+.speaker-text {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.audio-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem 1.2rem;
+  background: rgba(0,229,255,0.05);
+  border: 1px solid rgba(0,229,255,0.2);
+  margin-bottom: 1.5rem;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.wave {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.wave span {
+  display: block;
+  width: 3px;
+  background: var(--accent);
+  animation: wave 0.8s ease-in-out infinite;
+}
+
+.wave span:nth-child(1) { height: 8px; animation-delay: 0s; }
+.wave span:nth-child(2) { height: 14px; animation-delay: 0.1s; }
+.wave span:nth-child(3) { height: 20px; animation-delay: 0.2s; }
+.wave span:nth-child(4) { height: 14px; animation-delay: 0.3s; }
+.wave span:nth-child(5) { height: 8px; animation-delay: 0.4s; }
+
+@keyframes wave {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.4); }
+}
+
+/* OPTIONS */
+.options-section { margin-bottom: 1.5rem; }
+
+.option-btn {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 1rem 1.2rem;
+  margin-bottom: 0.6rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+  color: var(--text);
+  font-family: 'Sarabun', sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.option-btn:hover {
+  border-color: var(--accent);
+  background: rgba(0,229,255,0.05);
+}
+
+.option-btn.selected {
+  border-color: var(--accent);
+  background: rgba(0,229,255,0.08);
+}
+
+.option-btn.correct {
+  border-color: var(--success);
+  background: rgba(0,255,136,0.08);
+}
+
+.option-btn.wrong {
+  border-color: var(--danger);
+  background: rgba(255,51,102,0.08);
+}
+
+.option-btn.reveal-correct {
+  border-color: var(--success);
+  background: rgba(0,255,136,0.05);
+  opacity: 0.7;
+}
+
+.option-num {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+  padding-top: 0.15rem;
+  min-width: 20px;
+}
+
+/* MULTI-SELECT */
+.multi-hint {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--medium);
+  letter-spacing: 0.1em;
+  margin-bottom: 0.8rem;
+}
+
+/* SUBMIT */
+.submit-btn {
+  display: block;
+  width: 100%;
+  padding: 1rem;
+  background: transparent;
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 1.5rem;
+}
+
+.submit-btn:hover {
+  background: rgba(0,229,255,0.1);
+  box-shadow: 0 0 20px rgba(0,229,255,0.2);
+}
+
+.submit-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* RESULT */
+.result-box {
+  display: none;
+  padding: 1.2rem;
+  border: 1px solid;
+  margin-bottom: 1.5rem;
+}
+
+.result-box.correct {
+  border-color: var(--success);
+  background: rgba(0,255,136,0.05);
+}
+
+.result-box.wrong {
+  border-color: var(--danger);
+  background: rgba(255,51,102,0.05);
+}
+
+.result-header {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.8rem;
+}
+
+.result-box.correct .result-header { color: var(--success); }
+.result-box.wrong .result-header { color: var(--danger); }
+
+.result-reason {
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: var(--text-dim);
+}
+
+.result-reason strong {
+  color: var(--text);
+}
+
+.nav-btns {
+  display: flex;
+  gap: 1rem;
+}
+
+.nav-btn {
+  flex: 1;
+  padding: 0.8rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.nav-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.nav-btn.next {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.nav-btn.next:hover {
+  background: rgba(0,229,255,0.1);
+}
+
+/* PROGRESS */
+.progress-row {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 1.5rem;
+}
+
+.progress-dot {
+  flex: 1;
+  height: 3px;
+  background: var(--border);
+  transition: background 0.3s;
+}
+
+.progress-dot.done { background: var(--success); }
+.progress-dot.current { background: var(--accent); }
+.progress-dot.wrong-dot { background: var(--danger); }
+
+/* SCORE SCREEN */
+#score-screen {
+  display: none;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 2rem;
+  text-align: center;
+}
+
+.score-display {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 5rem;
+  color: var(--accent);
+  text-shadow: 0 0 40px rgba(0,229,255,0.4);
+  margin: 1rem 0;
+}
+
+.rank-badge {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  padding: 0.5rem 2rem;
+  border: 2px solid;
+  margin-bottom: 2rem;
+}
+
+.rank-badge.S { color: var(--accent); border-color: var(--accent); }
+.rank-badge.A { color: var(--success); border-color: var(--success); }
+.rank-badge.B { color: var(--medium); border-color: var(--medium); }
+.rank-badge.C { color: var(--accent2); border-color: var(--accent2); }
+.rank-badge.F { color: var(--danger); border-color: var(--danger); }
+
+.back-btn {
+  padding: 0.8rem 2.5rem;
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 1rem;
+}
+
+.back-btn:hover { background: rgba(0,229,255,0.1); }
+
+/* GLITCH */
+@keyframes glitch {
+  0% { clip-path: inset(40% 0 61% 0); transform: translate(-2px); }
+  20% { clip-path: inset(92% 0 1% 0); transform: translate(2px); }
+  40% { clip-path: inset(43% 0 1% 0); transform: translate(-1px); }
+  60% { clip-path: inset(25% 0 58% 0); transform: translate(3px); }
+  80% { clip-path: inset(54% 0 7% 0); transform: translate(-1px); }
+  100% { clip-path: inset(58% 0 43% 0); transform: translate(0); }
+}
+
+.glitch {
+  position: relative;
+}
+
+.glitch::before, .glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.glitch::before {
+  color: var(--accent2);
+  animation: glitch 0.3s infinite;
+}
+
+.glitch::after {
+  color: var(--accent);
+  animation: glitch 0.3s 0.15s infinite reverse;
+}
+
+/* FADE IN */
+.fade-in {
+  animation: fadeIn 0.4s ease forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* MOBILE */
+@media (max-width: 600px) {
+  .hud { flex-direction: column; gap: 0.8rem; text-align: center; }
+  .energy-bar { align-items: center; }
+}
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+<div class="corner-decor tl"></div>
+<div class="corner-decor tr"></div>
+<div class="corner-decor bl"></div>
+<div class="corner-decor br"></div>
+
+<!-- TITLE SCREEN -->
+<div id="title-screen">
+  <div class="classified-stamp">⚠ CLASSIFIED — LEVEL ALPHA CLEARANCE REQUIRED</div>
+  <div class="title-badge">// CYBER INTELLIGENCE DIVISION — UNIT 7 //</div>
+  <h1 class="glitch" data-text="OPERATION">OPERATION</h1>
+  <h1><span class="glitch" data-text=": CORE">: CORE</span></h1>
+  <div class="subtitle">ปฏิบัติการเจาะแก่นสาร</div>
+  <div class="story-box">
+    <div class="label">// MISSION BRIEFING //</div>
+    คุณคือ <strong>นักสืบไซเบอร์</strong> สังกัดหน่วยข่าวกรองพิเศษ ภารกิจของคุณคือถอดรหัสข้อความลับ แฟ้มคดี และบันทึกเสียงจากองค์กรอาชญากรรม<br><br>
+    สกัด <strong>"แก่นของข้อความ"</strong> ให้แม่นยำที่สุด — มิฉะนั้นคนร้ายจะหลุดรอดออกไป
+  </div>
+  <div class="level-select">
+    <button class="level-btn easy" onclick="startGame('easy')">🟢 EASY<br><small>ด่านเริ่มต้น (7 ข้อ)</small></button>
+    <button class="level-btn medium" onclick="startGame('medium')">🟡 MEDIUM<br><small>ด่านกลาง (6 ข้อ)</small></button>
+    <button class="level-btn hard" onclick="startGame('hard')">🔴 HARD<br><small>ด่านบอส (7 ข้อ)</small></button>
+    <button class="level-btn audio" onclick="startGame('audio')">🎧 AUDIO<br><small>โหมดฟัง (7 ข้อ)</small></button>
+  </div>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game-screen">
+  <div class="hud">
+    <div class="hud-left">
+      <div class="hud-label">// AGENT ID //</div>
+      <div class="hud-value" id="hud-level">EASY-01</div>
+    </div>
+    <div class="hud-center">
+      <div class="mission-code" id="hud-mission">OPERATION: CORE</div>
+    </div>
+    <div class="energy-bar">
+      <div class="hud-label">// ENERGY //</div>
+      <div class="energy-track">
+        <div class="energy-fill" id="energy-fill" style="width:100%"></div>
+      </div>
+      <div class="hud-label" id="energy-text">100%</div>
+    </div>
+  </div>
+
+  <div class="progress-row" id="progress-row"></div>
+
+  <div id="question-area" class="fade-in"></div>
+</div>
+
+<!-- SCORE SCREEN -->
+<div id="score-screen">
+  <div class="title-badge">// MISSION COMPLETE //</div>
+  <div style="font-family:'Rajdhani',sans-serif;font-size:1.5rem;font-weight:700;letter-spacing:0.1em;margin-top:1rem;">FINAL DEBRIEF</div>
+  <div class="score-display" id="final-score">0/0</div>
+  <div class="rank-badge" id="rank-badge">S</div>
+  <div style="font-size:0.9rem;color:var(--text-dim);max-width:400px;" id="rank-msg"></div>
+  <button class="back-btn" onclick="goHome()">↩ RETURN TO BASE</button>
+</div>
+
+<script>
+const QUESTIONS = {
+  easy: [
+    {
+      title: "เวลาที่หยุดนิ่ง",
+      article: "นาฬิกาบนข้อมือเหยื่อ<strong>หยุดนิ่งที่เลขสิบ</strong> เนื่องจากแรงกระแทกตอนที่ล้มลงพื้นพอดี",
+      options: ["เหยื่อล้มลงพื้นอย่างแรง", "นาฬิกาหยุดนิ่งที่เลขสิบ", "นาฬิกาข้อมือราคาแพงมาก"],
+      answer: 1,
+      reason: "ใจความสำคัญอยู่ <strong>ต้นประโยค</strong> — \"นาฬิกาหยุดนิ่งที่เลขสิบ\" คือข้อมูลสำคัญที่ระบุเวลาเกิดเหตุ ส่วนที่เหลือเป็นเพียงคำอธิบายสาเหตุ",
+      type: "single"
+    },
+    {
+      title: "รอยเท้าปริศนา",
+      article: "มีรอยดินโคลนจากรองเท้าขนาดใหญ่กลางห้อง <strong>ดังนั้นผู้ต้องสงสัยต้องเป็นผู้ชายตัวสูง</strong>",
+      options: ["พบรอยโคลนกลางห้อง", "รองเท้ามีขนาดใหญ่มาก", "ผู้ต้องสงสัยต้องเป็นผู้ชายตัวสูง"],
+      answer: 2,
+      reason: "ใจความสำคัญอยู่ <strong>ท้ายย่อหน้า</strong> หลังคำว่า \"ดังนั้น\" — ข้อสรุปหลักที่ตามมาจากหลักฐาน คือตัวของใจความจริงๆ",
+      type: "single"
+    },
+    {
+      title: "ความลับหลังร้าน",
+      article: "<strong>ถังขยะหลังร้านถูกรื้อค้นจนกระจุยกระจาย</strong> เพราะคนร้ายกำลังหาของบางอย่างที่ถูกทิ้งไว้",
+      options: ["ถังขยะหลังร้านถูกรื้อค้น", "คนร้ายกำลังหาของบางอย่าง", "ของสำคัญถูกทิ้งไว้ในขยะ"],
+      answer: 0,
+      reason: "ใจความสำคัญอยู่ <strong>ต้นประโยค</strong> — เหตุการณ์ที่เกิดขึ้นจริง คือ \"ถังขยะถูกรื้อค้น\" ส่วนหลังเป็นเพียงคำอธิบายเหตุผล",
+      type: "single"
+    },
+    {
+      title: "มื้ออาหารที่ค้างคา",
+      article: "อาหารบนโต๊ะยังร้อนอยู่และไม่มีรอยกิน <strong>สรุปได้ว่าเกิดเหตุด่วนก่อนเวลาอาหาร</strong>",
+      options: ["อาหารบนโต๊ะยังร้อนอยู่", "เกิดเหตุด่วนก่อนเวลาอาหาร", "ไม่มีใครยอมกินอาหาร"],
+      answer: 1,
+      reason: "ใจความสำคัญอยู่ <strong>ท้ายย่อหน้า</strong> หลัง \"สรุปได้ว่า\" — ประโยคนี้สรุปภาพรวมทั้งหมดในประโยคเดียว",
+      type: "single"
+    },
+    {
+      title: "สายลับสายใน",
+      article: "<strong>คนร้ายรู้รหัสผ่านของประตูบ้านเป็นอย่างดี</strong> เพราะไม่พบรอยงัดแงะที่ลูกบิดประตูเลยสักนิด",
+      options: ["ลูกบิดประตูไม่มีรอยงัดแงะ", "คนร้ายรู้รหัสผ่านของประตูบ้าน", "ประตูบ้านถูกล็อกไว้อย่างแน่นหนา"],
+      answer: 1,
+      reason: "ใจความสำคัญอยู่ <strong>ต้นประโยค</strong> — \"แก่นของข้อความ\" ที่ต้องการจะบอก ส่วนที่ตามมาเป็นหลักฐานสนับสนุน",
+      type: "single"
+    },
+    {
+      title: "เส้นผมบอกเบาะแส",
+      article: "พบเส้นผมยาวสีน้ำตาลติดอยู่ที่พนักพิงเก้าอี้ <strong>เพราะฉะนั้นคนร้ายอาจจะเป็นผู้หญิง</strong>",
+      options: ["พบเส้นผมสีน้ำตาล", "เก้าอี้มีรอยเส้นผมติดอยู่", "คนร้ายอาจจะเป็นผู้หญิง"],
+      answer: 2,
+      reason: "ใจความสำคัญอยู่ <strong>ท้ายประโยค</strong> หลัง \"เพราะฉะนั้น\" — ข้อสันนิษฐานหลักจากหลักฐาน",
+      type: "single"
+    },
+    {
+      title: "แผนตัดไฟ",
+      article: "<strong>ไฟในโกดังถูกตัดจากแผงควบคุมด้านนอก</strong> ทำให้คนในอาคารมองไม่เห็นทิศทางที่จะหนี",
+      options: ["ไฟในโกดังถูกตัดจากด้านนอก", "คนในอาคารมองไม่เห็นทางหนี", "แผงควบคุมไฟฟ้าเสีย"],
+      answer: 0,
+      reason: "ใจความสำคัญอยู่ <strong>ต้นประโยค</strong> — การกระทำหลักของคนร้ายที่เป็นสาเหตุของทุกอย่างที่ตามมา",
+      type: "single"
+    }
+  ],
+  medium: [
+    {
+      title: "Phantom Code — รหัสลวงตา",
+      article: "ในช่วงหลายวันที่ผ่านมา ทีมข่าวกรองพบความเคลื่อนไหวที่ผิดปกติจากกลุ่มเป้าหมาย <strong>รหัสผ่านที่ใช้เปิดตู้เซฟคือหมายเลข 5621</strong> โดยยกตัวอย่างเช่น ในอดีตพวกเขามักตั้งรหัสจากวันเกิดหรือเลขที่เกี่ยวข้องกับครอบครัว ซึ่งทำให้หลายคนเข้าใจผิด ดังนั้นต้องวิเคราะห์ข้อมูลอย่างระมัดระวัง",
+      options: ["ทีมข่าวกรองพบความเคลื่อนไหวผิดปกติ", "รหัสผ่านที่ใช้เปิดตู้เซฟคือหมายเลข 5621", "ต้องวิเคราะห์ข้อมูลอย่างระมัดระวัง"],
+      answer: 1,
+      reason: "ใจความสำคัญอยู่ <strong>กลางย่อหน้า</strong> — ประโยคเดียวที่ให้ข้อมูลตรงกับภารกิจ (รหัสผ่าน) ส่วนอื่นเป็นบริบทและตัวอย่างลวง",
+      type: "single"
+    },
+    {
+      title: "Silent Harbor Deal — ดีลลับท่าเรือเงียบ",
+      article: "<strong>เป้าหมายจะพบกันที่ท่าเรือฝั่งเหนือ</strong> ในบางกรณีที่ผ่านมา พวกเขาเคยนัดพบในร้านอาหารหรือโรงแรม ซึ่งเป็นเพียงการเบี่ยงเบนความสนใจ <strong>เวลานัดหมายคือ 21:45 น.</strong>",
+      options: ["เป้าหมายจะพบกันที่ท่าเรือฝั่งเหนือ", "เคยนัดพบในร้านอาหารหรือโรงแรม", "เวลานัดหมายคือ 21:45 น."],
+      answer: [0, 2],
+      reason: "ด่านนี้แบบ <strong>ต้น + ท้าย</strong> — ต้องเลือก 2 ประโยคที่รวมกันครบข้อมูล (สถานที่ + เวลา) ส่วนกลางเป็น \"ตัวอย่างพลความ\" ที่ใส่มาหลอก",
+      type: "multi",
+      hint: "⚠ เลือก 2 ตัวเลือกที่รวมกันแล้วครบข้อมูลภารกิจ"
+    },
+    {
+      title: "Layered Lockdown — ล็อกหลายชั้น",
+      article: "เพื่อให้เข้าใจง่าย ระบบนี้อาจเปรียบเทียบได้กับการล็อกหลายชั้น <strong>กุญแจหลักในการเข้าระบบคือรหัส 8843</strong> เช่นเดียวกับระบบอื่นๆ ที่ผู้ใช้อาจคิดว่ารหัสเกี่ยวข้องกับข้อมูลส่วนตัว รายละเอียดเพิ่มเติมจะถูกเปิดเผยภายหลัง",
+      options: ["ระบบนี้เปรียบเทียบได้กับการล็อกหลายชั้น", "กุญแจหลักในการเข้าระบบคือรหัส 8843", "รายละเอียดเพิ่มเติมจะถูกเปิดเผยภายหลัง"],
+      answer: 1,
+      reason: "ใจความสำคัญอยู่ <strong>กลางย่อหน้า</strong> — ประโยคเดียวที่ให้รหัสจริงตามภารกิจ ส่วนอื่นเป็นการเปรียบเปรยและรายละเอียดที่ไม่เกี่ยว",
+      type: "single"
+    },
+    {
+      title: "Warehouse Shadow — เงาแห่งโกดัง",
+      article: "<strong>จุดรับส่งของจะอยู่ที่โกดังหมายเลข 7</strong> โดยยกตัวอย่างเช่น ในอดีตเคยมีการใช้สถานที่อื่น เช่น ลานจอดรถหรืออาคารร้าง <strong>การส่งของจะเกิดขึ้นเวลา 03:00 น.</strong>",
+      options: ["จุดรับส่งของจะอยู่ที่โกดังหมายเลข 7", "เคยใช้ลานจอดรถหรืออาคารร้าง", "การส่งของจะเกิดขึ้นเวลา 03:00 น."],
+      answer: [0, 2],
+      reason: "ด่านนี้แบบ <strong>ต้น + ท้าย</strong> — สถานที่ + เวลา คือข้อมูลครบชุด ส่วนกลางเป็นตัวอย่างในอดีตที่ใส่มาหลอกให้สับสน",
+      type: "multi",
+      hint: "⚠ เลือก 2 ตัวเลือกที่รวมกันครบข้อมูลสถานที่และเวลา"
+    },
+    {
+      title: "Hidden Identity — ตัวตนที่ซ่อนอยู่",
+      article: "ในบางสถานการณ์ เจ้าหน้าที่อาจสับสนระหว่างผู้ต้องสงสัยหลายคน <strong>หัวหน้ากลุ่มที่แท้จริงใช้ชื่อว่า \"Kira\"</strong> เช่นเดียวกับกรณีอื่นๆ ที่มีการใช้ชื่อปลอมเพื่อหลอกลวง ดังนั้นต้องตรวจสอบข้อมูลให้แม่นยำ",
+      options: ["เจ้าหน้าที่อาจสับสนระหว่างผู้ต้องสงสัยหลายคน", "หัวหน้ากลุ่มที่แท้จริงใช้ชื่อว่า \"Kira\"", "ต้องตรวจสอบข้อมูลให้แม่นยำ"],
+      answer: 1,
+      reason: "ใจความสำคัญอยู่ <strong>กลางย่อหน้า</strong> — ประโยคเดียวที่ระบุตัวตนจริงของเป้าหมาย ซึ่งตรงกับภารกิจโดยตรง",
+      type: "single"
+    },
+    {
+      title: "Final Cipher — รหัสสุดท้าย",
+      article: "เพื่อให้เข้าใจง่าย ผู้ใช้บางคนอาจคิดว่ารหัสเกี่ยวข้องกับหมายเลขโทรศัพท์ <strong>รหัสปลดล็อกสุดท้ายคือ 9991</strong> โดยยกตัวอย่างเช่น ในหลายกรณี ผู้คนมักใช้ตัวเลขที่จดจำง่าย แต่ในกรณีนี้ข้อมูลดังกล่าวไม่เกี่ยวข้อง",
+      options: ["ผู้ใช้อาจคิดว่ารหัสเกี่ยวข้องกับโทรศัพท์", "รหัสปลดล็อกสุดท้ายคือ 9991", "ข้อมูลดังกล่าวไม่เกี่ยวข้อง"],
+      answer: 1,
+      reason: "ใจความสำคัญอยู่ <strong>กลางย่อหน้า</strong> — ประโยคเดียวที่ให้รหัสจริง (9991) ส่วนอื่นเป็นการลวงและตัวอย่างที่ไม่มีประโยชน์",
+      type: "single"
+    }
+  ],
+  hard: [
+    {
+      title: "กล้องที่หันผิดมุม",
+      article: "กล้องวงจรปิดภายในอาคารบันทึกภาพได้ตามปกติในทุกช่วงเวลา พนักงานรายงานว่าไม่มีความผิดปกติของระบบ และภาพจากหลายจุดก็ยังคงทำงานต่อเนื่อง แต่ในช่วงเวลาที่ของหาย กล้องตัวหนึ่งกลับหันออกจากจุดเดิมเล็กน้อย แม้จะยังบันทึกภาพอยู่ แต่พื้นที่สำคัญกลับไม่อยู่ในมุมมอง และหลังจากนั้น กล้องก็กลับไปอยู่ในตำแหน่งเดิมเหมือนไม่มีอะไรเกิดขึ้น",
+      options: ["ระบบกล้องมีปัญหาทางเทคนิค", "มีคนปรับมุมกล้องเพื่อปกปิดบางอย่าง", "พนักงานดูแลระบบไม่ดีพอ", "กล้องเก่าจึงเคลื่อนเองโดยบังเอิญ"],
+      answer: 1,
+      reason: "กล้องไม่ได้เสีย — มุมเปลี่ยนเฉพาะ<strong>ช่วงเวลาสำคัญ</strong> แล้วกลับคืนปกติ นี่คือพฤติกรรมที่มี<strong>เจตนา</strong> ไม่ใช่ความบังเอิญ",
+      type: "single"
+    },
+    {
+      title: "รอยเท้าที่ไม่ควรมี",
+      article: "พื้นในห้องถูกทำความสะอาดก่อนปิดทำการ และไม่มีใครเข้าออกหลังจากนั้น แต่ในตอนเช้า พบรอยเท้าเพียงชุดเดียวอยู่ภายใน รอยเท้านั้นเริ่มจากด้านในห้อง และไปสิ้นสุดที่หน้าประตู โดยไม่มีรอยเท้าใดๆ นำเข้ามาจากด้านนอก",
+      options: ["มีคนแอบเข้ามาจากหน้าต่าง", "พนักงานลืมทำความสะอาด", "คนร้ายอยู่ในห้องตั้งแต่แรก", "รอยเท้าเกิดจากความผิดพลาดของระบบ"],
+      answer: 2,
+      reason: "รอยเท้าเริ่มจาก<strong>ด้านใน</strong> ไม่มีรอยนำเข้า — หมายความว่าคนร้าย<strong>ซ่อนตัวอยู่ก่อนปิดทำการ</strong> ไม่ได้เข้ามาทีหลัง",
+      type: "single"
+    },
+    {
+      title: "เสียงที่มาก่อนเวลา",
+      article: "พยานเล่าว่าได้ยินเสียงบางอย่างก่อนเหตุการณ์จะเกิดขึ้น เวลาที่ระบุไม่ตรงกับข้อมูลจากระบบบันทึก เมื่อเทียบกันแล้ว เสียงที่ได้ยินเกิดขึ้นก่อนเวลาจริงของเหตุการณ์ และไม่มีแหล่งกำเนิดเสียงอื่นในบริเวณนั้น",
+      options: ["ระบบบันทึกเวลาผิดพลาด", "พยานจำเวลาผิด", "มีการเตรียมการก่อนเหตุการณ์", "เสียงมาจากที่อื่น"],
+      answer: 2,
+      reason: "เสียงเกิดก่อนเหตุการณ์จริง โดยไม่มีแหล่งกำเนิดอื่น — แปลว่ามี<strong>การเตรียมการล่วงหน้า</strong> ไม่ใช่เหตุที่เกิดทันที",
+      type: "single"
+    },
+    {
+      title: "ของที่หายไปโดยไม่มีร่องรอย",
+      article: "ห้องถูกล็อกอย่างแน่นหนา ไม่มีร่องรอยงัดแงะ หน้าต่างปิดสนิท และไม่มีใครเห็นการเข้าออก แต่ของภายในกลับหายไป สิ่งที่แปลกคือ คนที่มีสิทธิ์เข้าห้องมีเพียงไม่กี่คน และไม่มีใครรายงานความผิดปกติ",
+      options: ["มีคนบุกจากภายนอก", "ระบบล็อกมีปัญหา", "คนที่มีสิทธิ์เข้าห้องเป็นคนลงมือ", "ของถูกย้ายผิดที่"],
+      answer: 2,
+      reason: "ไม่มีร่องรอยงัดแงะ = คนร้ายไม่ต้องงัด = เป็น<strong>คนที่เข้าถึงได้อยู่แล้ว</strong> — Logic กำจัดตัวเลือกอื่นออกหมด",
+      type: "single"
+    },
+    {
+      title: "ข้อความที่ถูกลบ",
+      article: "บันทึกการสนทนาถูกกู้คืนมาเกือบทั้งหมด เนื้อหาส่วนใหญ่ยังคงอยู่ครบ แต่มีบางช่วงที่หายไป และเป็นช่วงที่บทสนทนากำลังเข้าประเด็นสำคัญ ข้อความก่อนหน้าและหลังจากนั้นยังคงอยู่ ทำให้เนื้อหาดูขาดตอนเพียงบางช่วง",
+      options: ["ระบบบันทึกมีข้อผิดพลาด", "ข้อมูลถูกลบเฉพาะจุดสำคัญ", "การกู้ข้อมูลไม่สมบูรณ์", "ไม่มีอะไรผิดปกติ"],
+      answer: 1,
+      reason: "ข้อมูลหายเฉพาะ<strong>ช่วงสำคัญ</strong> — ส่วนอื่นอยู่ครบ แสดงว่าถูก<strong>ลบแบบมีเป้าหมาย</strong> ไม่ใช่ความผิดพลาดของระบบ",
+      type: "single"
+    },
+    {
+      title: "เวลาที่ไม่เคยถูกใช้งาน",
+      article: "ระบบบันทึกการเข้าออกของอาคารทำงานปกติ พนักงานทุกคนใช้บัตรของตัวเองในการเข้าออกตามเวลางาน แต่มีบันทึกหนึ่งรายการที่ปรากฏขึ้นในช่วงเวลาที่ไม่มีใครควรอยู่ในอาคาร เวลานั้นไม่ตรงกับตารางของใคร และไม่มีการรายงานล่วงหน้า ที่สำคัญ บัตรที่ใช้ถูกระบุว่าเป็นของพนักงานที่ลาหยุดในวันนั้น",
+      options: ["ระบบบันทึกผิดพลาด", "พนักงานลาหยุดแอบเข้ามา", "มีการใช้บัตรของคนอื่น", "เจ้าหน้าที่ลืมลงเวลา"],
+      answer: 2,
+      reason: "บัตรถูกใช้ทั้งที่เจ้าของ<strong>ไม่อยู่</strong> — บ่งชี้ชัดว่ามีคน<strong>นำบัตรไปใช้แทน</strong> ไม่ใช่เจ้าของบัตรมาเอง",
+      type: "single"
+    },
+    {
+      title: "แสงที่เปิดทิ้งไว้",
+      article: "อาคารถูกปิดไฟทั้งหมดตามปกติในช่วงกลางคืน เจ้าหน้าที่ตรวจสอบยืนยันว่าไม่มีห้องใดเปิดไฟค้างไว้ แต่ในเช้าวันถัดมา พบว่ามีห้องหนึ่งมีไฟเปิดอยู่ ไม่มีรายงานการเข้าใช้งาน และประตูยังคงล็อกตามเดิม สิ่งที่น่าสังเกตคือ ห้องนั้นเป็นห้องที่ไม่มีใครใช้งานมานานแล้ว",
+      options: ["ระบบไฟมีปัญหาทางเทคนิค", "เจ้าหน้าที่ตรวจสอบไม่ทั่วถึง", "มีคนเข้าไปในห้องหลังปิดอาคาร", "ไฟเปิดเองตามระบบอัตโนมัติ"],
+      answer: 2,
+      reason: "ไฟถูกปิดหมดแล้ว แต่เปิดขึ้นมาในห้องที่ไม่มีใครใช้ — มีเพียงคำอธิบายเดียว: <strong>มีคนเข้าไปหลังปิดอาคาร</strong>",
+      type: "single"
+    }
+  ],
+  audio: [
+    {
+      title: "แผนซ้อนแผน — The Double Cross",
+      audio: [
+        { speaker: "A", text: "\"เงิน 5 ล้านในบัญชีม้านั่นน่ะ ฉันเช็กแล้วนะ มันเข้าเรียบร้อยแล้ว แต่แกแน่ใจนะว่า 'ของ' ที่ส่งไปให้พวกนั้นมันเป็นของจริง?\"" },
+        { speaker: "B", text: "\"ของจริงสิ... แต่ฉันใส่โปรแกรมติดตามตัวไว้ในชิปเซ็ตนั่นด้วย ทันทีที่พวกมันเสียบเข้าเซิร์ฟเวอร์หลัก พิกัดที่ตั้งฐานทัพลับของพวกมันจะเด้งขึ้นมาบนหน้าจอเราทันที เรื่องเงินน่ะแค่ของแถม แต่เรื่องกวาดล้างพวกมันให้สิ้นซากนั่นคือเป้าหมายหลักของคืนนี้\"" }
+      ],
+      options: ["การตรวจสอบยอดเงินในบัญชีม้า", "การส่งมอบของปลอมเพื่อหลอกเอาเงิน", "การใช้ชิปซ่อนโปรแกรมเพื่อสืบหาที่ตั้งฐานทัพคนร้าย"],
+      answer: 2,
+      reason: "แม้จะมีการพูดถึง \"เงิน\" และ \"ของ\" แต่ประโยคสุดท้ายของ B คือ <strong>Core Message</strong> — เป้าหมายจริงคือ \"ตามรอยพิกัด\" เพื่อกวาดล้าง",
+      type: "single"
+    },
+    {
+      title: "พยานปากสำคัญ — The Reluctant Witness",
+      audio: [
+        { speaker: "A", text: "\"คุณต้องพูดความจริงนะ ไม่งั้นเราช่วยลูกสาวคุณไม่ได้ กล้องวงจรปิดหน้าปากซอยมันเห็นรถคุณขับผ่านตอนเวลาเกิดเหตุพอดีเป๊ะ\"" },
+        { speaker: "B", text: "\"ผมไม่ได้อยากจะปิดบังหรอกนะคุณตำรวจ... แต่คืนนั้นน่ะ คนที่เดินลงมาจากรถคันนั้นไม่ใช่ผมหรอก แต่เป็นไอ้คนที่มีแผลเป็นที่มือซ้ายนั่นต่างหาก ผมถูกมันบังคับให้จอดรออยู่ในรถเฉยๆ ถ้าผมพูดไปมากกว่านี้ ครอบครัวผมจะไม่ปลอดภัย\"" }
+      ],
+      options: ["การข่มขู่พยานเรื่องความปลอดภัยของครอบครัว", "พยานปฏิเสธว่าตนเองไม่ใช่ผู้ลงมือกระทำผิดในที่เกิดเหตุ", "หลักฐานจากกล้องวงจรปิดที่มัดตัวคนขับรถ"],
+      answer: 1,
+      reason: "ประเด็นหลักสำหรับการสืบสวนคือ<strong>การระบุตัวผู้กระทำผิด</strong> — พยานยอมรับว่าอยู่ในเหตุการณ์ แต่ใจความสำคัญคือ \"เขาไม่ใช่คนลงมือ\"",
+      type: "single"
+    },
+    {
+      title: "สัญญาณอันตราย — The Compromised Protocol",
+      audio: [
+        { speaker: "A", text: "\"ระบบสำรองข้อมูล Cloud ทำงานปกติไหม? ฉันรู้สึกว่าช่วงนี้ Log มันแปลกๆ เหมือนมีคนพยายามจะ Brute Force เข้ามาบ่อยเกินไป\"" },
+        { speaker: "B", text: "\"ฉันเช็กแล้ว ไม่มีรอยรั่วหรอก แต่นายสังเกตไหมว่า แอดมินที่ดูแลระบบน่ะ พักนี้เข้างานสายแถมดูมีเงินใช้ผิดปกติ บางทีเราอาจจะมัวแต่เฝ้ากำแพงเหล็กจนลืมไปว่าประตูหลังมันอาจจะเปิดรอให้ใครบางคนเดินเข้ามาง่ายๆ ก็ได้นะ\"" }
+      ],
+      options: ["การโจมตีระบบ Cloud ด้วยวิธี Brute Force", "ความผิดปกติของระบบ Log ในเซิร์ฟเวอร์", "ความระแวงว่าคนในองค์กรอาจมีส่วนรู้เห็นกับการโจรกรรมข้อมูล"],
+      answer: 2,
+      reason: "A เปิดด้วยประเด็น Technical แต่ B หักมุมเข้าสู่ประเด็นหลักที่ใหญ่กว่า — <strong>Inside Threat</strong> โดยใช้การเปรียบ \"ประตูหลัง\" อย่างชาญฉลาด",
+      type: "single"
+    },
+    {
+      title: "การเจรจาพรางตัว — The Chameleon Protocol",
+      audio: [
+        { speaker: "A", text: "\"เป้าหมายกำลังจะออกจากตึกแล้วครับหัวหน้า เขาใส่เสื้อเชิ้ตสีขาว กางเกงสแล็คสีดำ ถือกระเป๋าเอกสารสีน้ำตาล ท่าทางรีบร้อนมากครับ ผมควรจะขับรถตามไปเลยไหม?\"" },
+        { speaker: "B", text: "\"รอเดี๋ยว! นายเห็นชายคนนั้นไหม? คนที่ใส่ชุดพนักงานทำความสะอาดที่กำลังเข็นรถขยะออกมาจากประตูด้านข้างน่ะ นั่นแหละคือเป้าหมายตัวจริงที่เราต้องจับตาดู\"" },
+        { speaker: "A", text: "\"ฮะ? แต่สายรายงานมาว่าเขาจะแต่งตัวเป็นนักธุรกิจนี่ครับ?\"" },
+        { speaker: "B", text: "\"ก็นั่นมันแผนล่อซื้อของเขาไงล่ะ จำไว้ว่าเป้าหมายของเราคือการตามรอยชายในชุดพนักงานทำความสะอาดคนนั้นไปให้ถึงที่กบดานใหม่ อย่าให้คลาดสายตาเชียวล่ะ\"" }
+      ],
+      options: ["การระบุรูปพรรณสันฐานของตัวปลอมที่แต่งกายเป็นนักธุรกิจ", "การระบุตัวตนที่แท้จริงของเป้าหมายและสั่งการให้สะกดรอยตาม", "การวิจารณ์ความผิดพลาดของสายข่าวที่รายงานข้อมูลเป็นเท็จ", "แผนการจับกุมพนักงานทำความสะอาด"],
+      answer: 1,
+      reason: "ใจความไม่ได้อยู่ที่ลักษณะของ \"ตัวหลอก\" แต่อยู่ที่<strong>การแก้ไขสถานการณ์ของ B</strong> ที่ชี้เป้าตัวจริงและสั่งการสะกดรอย",
+      type: "single"
+    },
+    {
+      title: "รหัสลับในร้านอาหาร — The Culinary Code",
+      audio: [
+        { speaker: "A", text: "\"ยินดีต้อนรับครับคุณลูกค้า วันนี้รับอะไรดีครับ? เรามีเมนูพิเศษเป็นสเต็กเนื้อวากิวส่งตรงจากญี่ปุ่นเลยนะครับ สนใจลองดูไหม?\"" },
+        { speaker: "B", text: "\"ขอบคุณครับ แต่พอดีผมมีนัดกับเพื่อนที่จองโต๊ะไว้แล้วน่ะครับ ไม่ทราบว่าโต๊ะเบอร์ 404 ทางทิศใต้วางอยู่ตรงไหนเหรอ?\"" },
+        { speaker: "A", text: "\"อ๋อ โต๊ะนั้นอยู่โซน VIP ครับ แต่คุณลูกค้าต้องระวังนิดนึงนะครับ พอดีทางเดินช่วงนั้นไฟเสีย รบกวนเปิดไฟฉายจากโทรศัพท์แล้วส่องไปที่หมายเลขโต๊ะ 3 ครั้งนะครับ เดี๋ยวพนักงานข้างในจะเดินออกมาต้อนรับท่านเองครับ\"" },
+        { speaker: "B", text: "\"เข้าใจแล้วครับ 3 ครั้งนะ...\"" }
+      ],
+      options: ["การแนะนำเมนูสเต็กวากิวที่เป็นโปรโมชั่นพิเศษ", "การแจ้งปัญหาระบบไฟในโซน VIP", "วิธีการให้สัญญาณลับเพื่อยืนยันตัวตนในการเข้าพื้นที่ส่วนตัว", "การจองโต๊ะสำหรับการประชุมลับ"],
+      answer: 2,
+      reason: "นี่คือ <strong>Social Engineering</strong> — บริบทร้านอาหารเป็นเพียงฉากบังหน้า ใจความจริงคือ \"วิธียืนยันตัวตน\" (ส่องไฟฉาย 3 ครั้ง) เพื่อเข้าพื้นที่ลับ",
+      type: "single"
+    },
+    {
+      title: "พยานที่มองไม่เห็น — The Invisible Witness",
+      audio: [
+        { speaker: "A", text: "\"คุณบอกว่าคืนเกิดเหตุคุณมองไม่เห็นอะไรเลยเพราะไฟในซอยมันมืดมาก แถมคุณยังลืมหยิบแว่นสายตาออกมาด้วยใช่ไหมครับ?\"" },
+        { speaker: "B", text: "\"ใช่ครับคุณตำรวจ ผมมองอะไรไม่เห็นจริงๆ... แต่แปลกนะ รถแพงๆ อย่าง 'รถสปอร์ตสีเหลือง' คันนั้นน่ะ ทำไมไฟท้ายข้างซ้ายถึงดับนะ?\"" },
+        { speaker: "A", text: "\"อืม... มืดจนมองไม่เห็นอะไรเลย แถมไม่ได้ใส่แว่นด้วย แต่ดันเห็น 'สีรถ' และ 'ไฟท้ายที่ดับ' ชัดเจนเลยนะครับคุณ\"" },
+        { speaker: "B", text: "\"เอ่อ... คือ... ผมอาจจะจำสลับกับข่าวในทีวีมั้งครับ\"" }
+      ],
+      options: ["การสอบสวนหาเบาะแสรถสปอร์ตสีเหลือง", "รายงานเสียงปืนดัง 2 นัดที่หน้าบ้านของพยาน", "พยานพยายามปกปิดความจริงแต่หลุดปากเผยรายละเอียดสำคัญ", "ปัญหาสุขภาพสายตาของพยาน"],
+      answer: 2,
+      reason: "บทสนทนานี้ไม่ได้เน้น \"ข้อมูลรถ\" แต่เน้น <strong>พฤติกรรมของพยาน</strong> — แก่นสำคัญคือตำรวจ \"จับเท็จ\" ได้จากคำพูดที่ขัดแย้งกัน",
+      type: "single"
+    },
+    {
+      title: "พยานปากเอก — The Witness Clarification",
+      audio: [
+        { speaker: "A", text: "\"ตกลงคนร้ายที่วิ่งออกจากร้านทองน่ะ สูงประมาณเท่าไหร่? รปภ. บอกว่าประมาณ 180 ใส่เสื้อคลุมสีเขียวขี้ม้าใช่ไหม?\"" },
+        { speaker: "B", text: "\"รปภ. น่ะตาฝาดครับ! คนร้ายสูงแค่ประมาณ 165 ส่วนเสื้อน่ะไม่ใช่สีเขียวครับ แต่เป็นเสื้อหนังสีน้ำตาลเข้มที่ดูเก่าๆ\"" },
+        { speaker: "A", text: "\"เสื้อหนังสีน้ำตาล สูง 165... แล้วหมวกกันน็อกล่ะ? มีคนเห็นเขาใส่หมวกเต็มใบสีดำด้วย\"" },
+        { speaker: "B", text: "\"ไม่ใช่ครับ! เขาไม่ได้ใส่หมวก แต่เขา 'ใส่วิกผมยาวสีทอง' ทับผมจริง แล้วตอนวิ่งหนีเขาดันทำ 'นาฬิกาข้อมือสายเหล็ก' หล่นไว้ที่หน้าประตูร้านด้วย!\"" },
+        { speaker: "A", text: "\"โอเค! ข้อมูลเรื่องวิกสีทองกับนาฬิกาสายเหล็กนี่แหละสำคัญที่สุด\"" }
+      ],
+      options: ["การโต้เถียงเรื่องความสูงและสีเสื้อระหว่างพยานกับ รปภ.", "การรวบรวมเบาะแสหาหมวกกันน็อกสีดำ", "การระบุรูปพรรณสันฐานที่แท้จริงและหลักฐานที่คนร้ายทิ้งไว้", "แผนตรวจลายนิ้วมือบนประตูร้านทอง"],
+      answer: 2,
+      reason: "ข้อมูลที่เถียงกัน (ความสูง, สีเสื้อ, หมวก) คือ \"Noise\" — <strong>แก่นสำคัญ</strong> คือข้อมูลใหม่ที่ชี้ชัดตัวตน (วิกสีทอง) และหลักฐานจับต้องได้ (นาฬิกาสายเหล็ก)",
+      type: "single"
+    }
+  ]
+};
+
+let currentMode = 'easy';
+let currentIndex = 0;
+let score = 0;
+let energy = 100;
+let selectedOptions = [];
+let answered = false;
+let results = [];
+
+function startGame(mode) {
+  currentMode = mode;
+  currentIndex = 0;
+  score = 0;
+  energy = 100;
+  results = [];
+  answered = false;
+  selectedOptions = [];
+
+  document.getElementById('title-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display = 'block';
+  document.getElementById('score-screen').style.display = 'none';
+
+  const modeLabels = { easy: 'EASY', medium: 'MEDIUM', hard: 'HARD', audio: 'AUDIO' };
+  document.getElementById('hud-level').textContent = `${modeLabels[mode]}-MODE`;
+  document.getElementById('hud-mission').textContent = 'OPERATION: CORE';
+
+  buildProgressBar();
+  renderQuestion();
+}
+
+function buildProgressBar() {
+  const total = QUESTIONS[currentMode].length;
+  const row = document.getElementById('progress-row');
+  row.innerHTML = '';
+  for (let i = 0; i < total; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'progress-dot';
+    dot.id = `pdot-${i}`;
+    row.appendChild(dot);
+  }
+  updateProgress();
+}
+
+function updateProgress() {
+  const total = QUESTIONS[currentMode].length;
+  for (let i = 0; i < total; i++) {
+    const dot = document.getElementById(`pdot-${i}`);
+    if (!dot) continue;
+    dot.className = 'progress-dot';
+    if (i < currentIndex) {
+      dot.classList.add(results[i] ? 'done' : 'wrong-dot');
+    } else if (i === currentIndex) {
+      dot.classList.add('current');
+    }
+  }
+}
+
+function updateEnergy() {
+  const fill = document.getElementById('energy-fill');
+  const txt = document.getElementById('energy-text');
+  fill.style.width = energy + '%';
+  txt.textContent = energy + '%';
+  if (energy > 60) fill.style.background = 'var(--success)';
+  else if (energy > 30) fill.style.background = 'var(--medium)';
+  else fill.style.background = 'var(--danger)';
+}
+
+function renderQuestion() {
+  const qs = QUESTIONS[currentMode];
+  if (currentIndex >= qs.length) { showScore(); return; }
+  
+  const q = qs[currentIndex];
+  answered = false;
+  selectedOptions = [];
+
+  updateProgress();
+
+  const area = document.getElementById('question-area');
+  area.className = 'fade-in';
+
+  const diffMap = { easy: 'easy', medium: 'medium', hard: 'hard', audio: 'hard' };
+  const diffLabel = { easy: 'EASY', medium: 'MEDIUM', hard: 'HARD', audio: 'AUDIO MODE' };
+  const diff = diffMap[currentMode];
+
+  let articleHTML = '';
+  if (currentMode === 'audio') {
+    articleHTML = `
+      <div class="audio-indicator">
+        <div class="wave">${'<span></span>'.repeat(5)}</div>
+        <span>// INTERCEPTED AUDIO LOG — DECRYPTING... //</span>
+      </div>
+      <div class="section-label">// AUDIO TRANSCRIPT //</div>
+      <div class="audio-box">
+        ${q.audio.map(line => `
+          <div class="audio-speaker">
+            <div class="speaker-tag ${line.speaker}">${line.speaker}</div>
+            <div class="speaker-text">${line.text}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } else {
+    articleHTML = `
+      <div class="section-label">// INTERCEPTED MESSAGE //</div>
+      <div class="article-box">${q.article}</div>
+    `;
+  }
+
+  const multiHint = q.type === 'multi' ? `<div class="multi-hint">${q.hint}</div>` : '';
+
+  area.innerHTML = `
+    <div class="case-header">
+      <div class="case-number">CASE ${String(currentIndex + 1).padStart(2,'0')}/${String(qs.length).padStart(2,'0')}</div>
+      <div>
+        <div class="case-title">${q.title}</div>
+        <div class="difficulty-badge ${diff}">${diffLabel[currentMode]}</div>
+      </div>
+    </div>
+    <div class="briefing-box">
+      <div class="label">// MISSION OBJECTIVE //</div>
+      ระบุ "ใจความสำคัญ" ของข้อความนี้ เพื่อถอดรหัสเบาะแสต่อไป
+    </div>
+    ${articleHTML}
+    <div class="options-section">
+      <div class="section-label">// SELECT CORE MESSAGE //</div>
+      ${multiHint}
+      ${q.options.map((opt, i) => `
+        <button class="option-btn" id="opt-${i}" onclick="selectOption(${i})">
+          <span class="option-num">0${i+1}.</span>
+          <span>${opt}</span>
+        </button>
+      `).join('')}
+    </div>
+    <button class="submit-btn" id="submit-btn" onclick="submitAnswer()" disabled>⟶ DECRYPT & CONFIRM</button>
+    <div class="result-box" id="result-box"></div>
+    <div class="nav-btns" id="nav-btns" style="display:none">
+      <button class="nav-btn" onclick="goHome()">↩ HOME</button>
+      <button class="nav-btn next" onclick="nextQuestion()">NEXT CASE ⟶</button>
+    </div>
+  `;
+}
+
+function selectOption(i) {
+  if (answered) return;
+  const q = QUESTIONS[currentMode][currentIndex];
+
+  if (q.type === 'multi') {
+    const idx = selectedOptions.indexOf(i);
+    if (idx === -1) {
+      selectedOptions.push(i);
+      document.getElementById(`opt-${i}`).classList.add('selected');
+    } else {
+      selectedOptions.splice(idx, 1);
+      document.getElementById(`opt-${i}`).classList.remove('selected');
+    }
+    document.getElementById('submit-btn').disabled = selectedOptions.length === 0;
+  } else {
+    q.options.forEach((_, j) => document.getElementById(`opt-${j}`)?.classList.remove('selected'));
+    selectedOptions = [i];
+    document.getElementById(`opt-${i}`).classList.add('selected');
+    document.getElementById('submit-btn').disabled = false;
+  }
+}
+
+function submitAnswer() {
+  if (answered) return;
+  answered = true;
+  document.getElementById('submit-btn').disabled = true;
+
+  const q = QUESTIONS[currentMode][currentIndex];
+  let correct = false;
+
+  if (q.type === 'multi') {
+    const correctSet = new Set(q.answer);
+    const selSet = new Set(selectedOptions);
+    correct = [...correctSet].every(v => selSet.has(v)) && selSet.size === correctSet.size;
+  } else {
+    correct = selectedOptions[0] === q.answer;
+  }
+
+  results.push(correct);
+
+  // Style options
+  q.options.forEach((_, i) => {
+    const btn = document.getElementById(`opt-${i}`);
+    if (!btn) return;
+    const isCorrect = q.type === 'multi' ? q.answer.includes(i) : i === q.answer;
+    const isSelected = selectedOptions.includes(i);
+
+    btn.classList.remove('selected');
+    if (isCorrect && isSelected) btn.classList.add('correct');
+    else if (!isCorrect && isSelected) btn.classList.add('wrong');
+    else if (isCorrect) btn.classList.add('reveal-correct');
+  });
+
+  if (correct) {
+    score++;
+  } else {
+    energy = Math.max(0, energy - 20);
+    updateEnergy();
+  }
+
+  const resultBox = document.getElementById('result-box');
+  resultBox.className = `result-box ${correct ? 'correct' : 'wrong'}`;
+  resultBox.style.display = 'block';
+  resultBox.innerHTML = `
+    <div class="result-header">${correct ? '✓ DECRYPTION SUCCESSFUL — CORE IDENTIFIED' : '✗ WRONG FREQUENCY — SIGNAL CORRUPTED'}</div>
+    <div class="result-reason"><strong>Detective Analysis:</strong> ${q.reason}</div>
+  `;
+
+  document.getElementById('nav-btns').style.display = 'flex';
+  updateProgress();
+}
+
+function nextQuestion() {
+  currentIndex++;
+  renderQuestion();
+}
+
+function showScore() {
+  document.getElementById('game-screen').style.display = 'none';
+  const scoreScreen = document.getElementById('score-screen');
+  scoreScreen.style.display = 'flex';
+
+  const total = QUESTIONS[currentMode].length;
+  const pct = score / total;
+
+  document.getElementById('final-score').textContent = `${score}/${total}`;
+
+  let rank, msg;
+  if (pct === 1) { rank = 'S'; msg = 'สมบูรณ์แบบ! คุณคือนักสืบไซเบอร์ระดับตำนาน ไม่มีรหัสใดที่เจาะไม่ได้'; }
+  else if (pct >= 0.8) { rank = 'A'; msg = 'ยอดเยี่ยม! ทักษะการจับใจความของคุณอยู่ในระดับสูงมาก'; }
+  else if (pct >= 0.6) { rank = 'B'; msg = 'ดี! ยังมีบางจุดที่ต้องฝึกฝน แต่คุณมีศักยภาพสูง'; }
+  else if (pct >= 0.4) { rank = 'C'; msg = 'พอใช้ได้ ลองอ่านเนื้อหาให้ช้าลงและสังเกตตำแหน่งของใจความ'; }
+  else { rank = 'F'; msg = 'ต้องฝึกเพิ่มเติม! กลับไปทบทวนบทเรียนเรื่องการจับใจความสำคัญ'; }
+
+  document.getElementById('rank-badge').textContent = `RANK: ${rank}`;
+  document.getElementById('rank-badge').className = `rank-badge ${rank}`;
+  document.getElementById('rank-msg').textContent = msg;
+}
+
+function goHome() {
+  document.getElementById('title-screen').style.display = 'flex';
+  document.getElementById('game-screen').style.display = 'none';
+  document.getElementById('score-screen').style.display = 'none';
+}
+
+// Init
+updateEnergy();
+</script>
+</body>
+</html>
